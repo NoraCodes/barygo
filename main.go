@@ -1,10 +1,16 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"time"
 )
+
+type argT struct {
+	Filename string `cli:"filename" usage:"The file to read from"`
+}
 
 // Handle possible errors by aborting
 func handle(err error) {
@@ -20,9 +26,14 @@ func closeFile(fi *os.File) {
 }
 
 func main() {
-	// TODO: Replace with actual selectable
-	// Open the input file for reading
-	file, err := os.Open("/tmp/bodies.txt")
+	// Check arguments
+	if len(os.Args) <= 1 {
+		fmt.Printf("Not enough arguments! Usage: %s FILENAME\n", os.Args[0])
+		os.Exit(1)
+	}
+
+	// Open the input file
+	file, err := os.Open(os.Args[1])
 	handle(err)
 	defer closeFile(file)
 
@@ -30,6 +41,7 @@ func main() {
 	var masspoints []MassPoint
 
 	// Scan the file for MassPoints
+	start_loading := time.Now()
 	var count int
 	for {
 		var x, y, z, mass float64
@@ -44,8 +56,12 @@ func main() {
 		count++
 	}
 
-	fmt.Printf("Loaded %d values from file.\n", count)
+	fmt.Printf("Loaded %d values from file in %s.\n", count, time.Since(start_loading))
+	if count <= 1 {
+		handle(errors.New("Insufficient number of values; there must be at least one "))
+	}
 
+	start_calculation := time.Now()
 	// Map the points into the mass-weighed hyperspace
 	hyperspace := make([]MassPoint, count)
 	for _, v := range masspoints {
@@ -71,4 +87,5 @@ func main() {
 		systemAverage.y,
 		systemAverage.z,
 		systemAverage.mass)
+	fmt.Printf("Calculation took %s.\n", time.Since(start_calculation))
 }
